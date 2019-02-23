@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+
+.province {
+  fill: none;
+  stroke:white;
+
+}
+.province: hover{
+  stroke:orange;
+}
+</style>
+<svg width="960" height="600"></svg>
+<script src="../lib/d3.v5.min.js"></script>
+<script src="../lib/d3-scale-chromatic.v1.min.js"></script>
+<script src="../lib/topojson.v2.min.js"></script>
+<script src="../lib/d3-tip.min.js"></script>
+<script>
+
+
+
+    var svg = d3.select("svg")
+
+    svg.append("text").style("font-size",32).attr("font-weight", "bold").text("Visualization of Geographical Distribution").attr("x","260").attr("y","30");
+
+  var numbers = d3.map();
+
+  var state = d3.map();
+
+  var pharm = d3.map();
+
+  var IT = d3.map();
+
+  var other = d3.map();
+
+  var projection = d3.geoMercator().translate([840/ 2, 600 / 2]).center([105, 38]).scale(550)
+
+
+  var path = d3.geoPath(projection);
+
+  var x = d3.scaleLinear().domain([10,400])
+      .range([600, 720]);
+
+  var color = d3.scaleThreshold().domain([10,50,100,250,500])
+      .range(d3.schemeBlues[5]);
+
+  var g = svg.append("g")
+      .attr("class", "key")
+      .attr("transform", "translate(0,40)");
+
+  g.selectAll("rect")
+    .data(color.range().map(function(d) {
+        d = color.invertExtent(d);
+        if (d[0] == null) d[0] = x.domain()[0];
+        if (d[1] == null) d[1] = x.domain()[1];
+        return d;
+      }))
+    .enter().append("rect")
+      .attr("height", 8)
+      .attr("x", function(d) { return x(d[0]); })
+      .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+      .attr("fill", function(d) { return color(d[0]); });
+
+  g.append("text")
+      .attr("class", "caption")
+      .attr("x", x.range()[0])
+      .attr("y", -6)
+      .attr("fill", "#000")
+      .attr("text-anchor", "start")
+      .attr("font-weight", "bold")
+      .text("Number of firms");
+
+  g.call(d3.axisBottom(x)
+       .tickSize(6)
+       .tickFormat(function(x, i) { return i ? x : x ; })
+       .tickValues(color.domain()))
+     .select(".domain")
+       .remove();
+
+ // d3.csv("county_poverty.csv").then(function(data) {data.forEach(function(d){poverty.set(d.CensusId,+d.Poverty)})});
+
+  //console.log(poverty.get(01003));
+    
+
+  //poverty2.forEach(function(d){
+     //poverty.set(d.id, d.Poverty);})
+
+  
+  var promises = [
+    d3.json("china_provinces.json"),
+    d3.csv("province.csv",function(d){numbers.set(d.id,+d.num);}),
+    d3.csv("province.csv",function(d){state.set(d.id,d.province);}),
+    d3.csv("province.csv",function(d){pharm.set(d.id,+d.pharm);}),
+    d3.csv("province.csv",function(d){IT.set(d.id,+d.IT);}),
+    d3.csv("province.csv",function(d){other.set(d.id,+d.other);})
+   ];
+
+  console.log(promises);
+  
+  Promise.all(promises).then(ready)
+  //console.log(countypoverty);
+
+  function ready([china]) {
+
+    var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10,0])
+  .html(
+     function(d){ return "Province " + state.get(d.id)+ "\n" + "Total: " + numbers.get(d.id) + "\n" + "Pharmaceuticl: " + pharm.get(d.id) + '\n' + "IT: " + IT.get(d.id) + '\n' + "Other: " + Other.get(d.id); });
+
+   console.log(topojson.feature(china, china.objects.provinces).features);
+  svg.append("g")
+      .attr("class", "province")
+      .selectAll("path")
+      .data(topojson.feature(china, china.objects.provinces).features)
+      .enter().append("path")
+      .attr("fill", function(d){return color(d.numbers = numbers.get(d.id));})
+      .attr("d", path)
+  
+  svg.selectAll("text")
+  .data(topojson.feature(china, china.objects.provinces).features)
+  .enter()
+  .append("svg:text")
+  .text(function(d,i) { return state.get(d.id) + ": "  + numbers.get(d.id)})
+  .attr("x",function(d,i){ return path.centroid(d)[0]})
+  .attr("y",function(d,i){ return path.centroid(d)[1]})
+  .attr("font-size",8)
+      //.on('mouseover', function(d,i){ d3.select(this).attr('stroke', 'pink');
+        //d3.select(this).append("title").text(function(d,i){ return "Province: " + state.get(d.id) + "\n" + "Total: " + numbers.get(d.id) + "\n"+"Pharmaceutical: "+pharm.get(d.id) + '\n' + "IT: "+ IT.get(d.id) + '\n' + "Other: " + other.get(d.id);})})
+                   
+               // .on('mouseout',function(d,i){ d3.select(this).attr('stroke', 'white')});
+        
+                   
+                    //Remove the tooltip
+      //since the tip tool keeps having fetch problems, I am also using another method to show the information.
+
+   //svg.append("path")
+        //.datum(topojson.mesh(china, china.objects.provinces, function(a, b) { return a !== b; }))
+        //.attr("class", "states")
+        //.attr("d", path);
+  }
+
+</script>
